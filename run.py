@@ -3,7 +3,6 @@ import logging
 import scrapy
 
 
-logging.config.fileConfig('log.ini', disable_existing_loggers=False)
 logger = logging.getLogger()
 
 URL_BASE = 'https://www.portalinmobiliario.com/venta/casa/'
@@ -15,28 +14,26 @@ URL_PROVIDENCIA = URL_BASE + 'providencia-metropolitana' + URL_SUFFIX
 URL_TEST = 'http://brickset.com/sets/year-2016'
 
 
-class HousesSpider(scrapy.Spider):
-    name = "houses_spider"
+class BuildingsSpider(scrapy.Spider):
+    name = "buildings"
     start_urls = [URL_LAS_CONDES]
 
     def parse(self, response):
-        print('================================================')
-        for item in response.css('.product-item'):
+        logger.info('================================================')
+        for item in response.css('.propiedad'):
             item_id = item.xpath('.//@data-product-id').get()
-            print(item_id)
 
-            # x = item.css('.product-item-summary')
-            # print('x:', x)
-            # z = x.xpath('.//p[1]')
-            # print('z:', z)
+            item_data = item.css('.product-item-data')
+            item_link = item_data.xpath('.//div/div[1]/h4/a/@href').get()
+            item_price = item_data.xpath('.//div/div[2]/p/span/@data-price').get()
+            item_currency = item_data.xpath('.//div/div[2]/p/span/@data-price-currency').get()
 
-            item_price = item.css('.product-price-value::attr(data-price)')
-            price = item_price.extract()
-            # discard projects, accept only existing buildings
-            if len(price) > 1:
-                continue
-            print(price)
+            item_area = item_data.xpath('.//div/div[3]/p/span/text()').get()
+            item_area_built = item_area.split(' ')[0]
+            item_area_terrain = item_area.split(' ')[2]
 
-            # area = item.xpath('//div[1]')
-            # print(area)
-        print('================================================')
+            logger.debug('[{id}] => {price} / {currency} / {area_built} / {area_terrain}'
+                         .format(id=item_id, price=item_price, currency=item_currency,
+                                 area_built=item_area_built, area_terrain=item_area_terrain))
+
+        logger.info('================================================')
