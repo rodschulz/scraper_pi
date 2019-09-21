@@ -15,10 +15,19 @@ URL_PROVIDENCIA = URL_BASE + 'providencia-metropolitana' + URL_SUFFIX
 
 class BuildingsSpider(scrapy.Spider):
     name = "buildings"
-    start_urls = [URL_LAS_CONDES, URL_PROVIDENCIA, URL_NUNOA]
+    start_urls = [
+        URL_LAS_CONDES,
+        URL_PROVIDENCIA,
+        URL_NUNOA
+    ]
+
+    custom_settings = {
+        'RETRY_TIMES': '50',
+        'RETRY_HTTP_CODES': [500, 502, 503, 504, 522, 524, 408, 404],
+    }
 
     def parse(self, response):
-        town = response.css('.results-title').xpath('.//ol/li[5]/text()').get()
+        town = response.css('.results-title').xpath('.//ol/li[5]/text()').get().replace('ñ', 'n').replace('Ñ', 'N')
         for item in response.css('.propiedad'):
             item_data = item.css('.product-item-data')
             item_area = item_data.xpath('.//div/div[3]/p/span/@data-title').get()
@@ -29,6 +38,7 @@ class BuildingsSpider(scrapy.Spider):
                 item_area = item_area.replace('m&sup2;', '').split('/')
 
                 data_1 = item_area[0].strip().replace('.', '').split(' ')
+                data_2 = ['', '']
                 if len(item_area) > 1:
                     data_2 = item_area[1].strip().replace('.', '').split(' ')
 
