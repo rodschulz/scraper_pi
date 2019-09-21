@@ -18,6 +18,7 @@ class BuildingsSpider(scrapy.Spider):
     start_urls = [URL_LAS_CONDES, URL_PROVIDENCIA, URL_NUNOA]
 
     def parse(self, response):
+        town = response.css('.results-title').xpath('.//ol/li[5]/text()').get()
         for item in response.css('.propiedad'):
             item_data = item.css('.product-item-data')
 
@@ -38,6 +39,7 @@ class BuildingsSpider(scrapy.Spider):
                 area_terrain = data_2[0]
 
             yield {
+                'town': town,
                 'id': item.xpath('.//@data-product-id').get(),
                 'price': item_data.xpath('.//div/div[2]/p/span/@data-price').get(),
                 'currency': item_data.xpath('.//div/div[2]/p/span/@data-price-currency').get(),
