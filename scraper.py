@@ -6,7 +6,7 @@ import scrapy
 logger = logging.getLogger()
 
 URL_BASE = 'https://www.portalinmobiliario.com/venta/casa/'
-URL_SUFFIX = '?ca=3&ts=1&mn=2&or=&sf=1&sp=0&at=0&pg=76'
+URL_SUFFIX = '?ca=3&ts=1&mn=2&or=&sf=1&sp=0&at=0&pg=1'
 
 URL_LAS_CONDES = URL_BASE + 'las-condes-metropolitana' + URL_SUFFIX
 URL_NUNOA = URL_BASE + 'nunoa-metropolitana' + URL_SUFFIX
