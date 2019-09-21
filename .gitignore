@@ -97,11 +97,16 @@ venv.bak/
 # Rope project settings
 .ropeproject
 
-# PyCharm projct
-.idea/*
-
 # mkdocs documentation
 /site
 
 # mypy
 .mypy_cache/
+
+
+# PyCharm project
+.idea/*
+
+# custom
+data/*
+plots/*
