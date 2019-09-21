@@ -19,21 +19,35 @@ class BuildingsSpider(scrapy.Spider):
     start_urls = [URL_LAS_CONDES]
 
     def parse(self, response):
-        logger.info('================================================')
         for item in response.css('.propiedad'):
-            item_id = item.xpath('.//@data-product-id').get()
-
             item_data = item.css('.product-item-data')
-            item_link = item_data.xpath('.//div/div[1]/h4/a/@href').get()
-            item_price = item_data.xpath('.//div/div[2]/p/span/@data-price').get()
-            item_currency = item_data.xpath('.//div/div[2]/p/span/@data-price-currency').get()
 
-            item_area = item_data.xpath('.//div/div[3]/p/span/text()').get()
-            item_area_built = item_area.split(' ')[0]
-            item_area_terrain = item_area.split(' ')[2]
+            item_area = item_data.xpath('.//div/div[3]/p/span/@data-title').get().replace('m&sup2;', '').split('/')
+            data_1 = item_area[0].strip().split(' ')
+            if len(item_area) > 1:
+                data_2 = item_area[1].strip().split(' ')
 
-            logger.debug('[{id}] => {price} / {currency} / {area_built} / {area_terrain}'
-                         .format(id=item_id, price=item_price, currency=item_currency,
-                                 area_built=item_area_built, area_terrain=item_area_terrain))
+            area_building = -1
+            area_terrain = -1
+            if data_1[1].lower() == 'construida':
+                area_building = data_1[0]
+            if data_2[1].lower() == 'construida':
+                area_building = data_2[0]
+            if data_1[1].lower() == 'terreno':
+                area_terrain = data_1[0]
+            if data_2[1].lower() == 'terreno':
+                area_terrain = data_2[0]
 
-        logger.info('================================================')
+            yield {
+                'id': item.xpath('.//@data-product-id').get(),
+                'price': item_data.xpath('.//div/div[2]/p/span/@data-price').get(),
+                'currency': item_data.xpath('.//div/div[2]/p/span/@data-price-currency').get(),
+                'area_building': area_building,
+                'area_terrain': area_terrain,
+                'link': item_data.xpath('.//div/div[1]/h4/a/@href').get()
+            }
+
+        next_page = response.css('.pagination').css('.siguiente a::attr(href)').get()
+        if next_page is not None:
+            next_page = response.urljoin(next_page)
+            yield scrapy.Request(next_page, callback=self.parse)
