@@ -11,12 +11,11 @@ URL_SUFFIX = '?ca=3&ts=1&mn=2&or=&sf=1&sp=0&at=0&pg=1'
 URL_LAS_CONDES = URL_BASE + 'las-condes-metropolitana' + URL_SUFFIX
 URL_NUNOA = URL_BASE + 'nunoa-metropolitana' + URL_SUFFIX
 URL_PROVIDENCIA = URL_BASE + 'providencia-metropolitana' + URL_SUFFIX
-URL_TEST = 'http://brickset.com/sets/year-2016'
 
 
 class BuildingsSpider(scrapy.Spider):
     name = "buildings"
-    start_urls = [URL_LAS_CONDES]
+    start_urls = [URL_LAS_CONDES, URL_PROVIDENCIA, URL_NUNOA]
 
     def parse(self, response):
         for item in response.css('.propiedad'):
