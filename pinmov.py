@@ -4,7 +4,8 @@ import numbers
 import scrapy
 
 
-logger = logging.getLogger()
+logging.config.fileConfig('logging.conf')
+logger = logging.getLogger(__name__)
 
 URL_LAS_CONDES = 'https://www.portalinmobiliario.com/venta/casa/las-condes-metropolitana'
 URL_PROVIDENCIA = 'https://www.portalinmobiliario.com/venta/casa/providencia-metropolitana'
@@ -22,20 +23,30 @@ URL_NUNOA = 'https://www.portalinmobiliario.com/venta/casa/nunoa-metropolitana'
 class BuildingsSpider(scrapy.Spider):
     name = "buildings"
     start_urls = [
-        URL_LAS_CONDES,
+        # URL_LAS_CONDES,
         # URL_PROVIDENCIA,
         # URL_LA_REINA,
-        # URL_NUNOA,
+        URL_NUNOA,
     ]
 
     custom_settings = {
         'RETRY_TIMES': '2',
         'RETRY_HTTP_CODES': [500, 502, 503, 504, 522, 524, 408, 404],
         'FEED_FORMAT': 'json',
+        'CONCURRENT_REQUESTS_PER_DOMAIN': 1,
+        'CONCURRENT_ITEMS': 1,
+        'CONCURRENT_REQUESTS': 1,
     }
 
     def parse(self, response):
+        logger.info('scraping {}'.format(response.url))
+
         items = response.css('.results-item')
+        if items is None:
+            logger.warning('no items found')
+            return
+
+        n = 0
         for item in items:
             is_project = item.css('.item__image-label::text').get() is not None
             currency = item.css('.price__symbol::text').get()
@@ -62,26 +73,31 @@ class BuildingsSpider(scrapy.Spider):
                 'bathrooms': -1,
             }
 
-            yield response.follow(link, callback=self.parse_details, meta=data)
+            n += 1
+            logger.debug('  > found {:02}: ...{}...'.format(n, data['link'][34:34+70]))
+
+            yield response.follow(link, callback=BuildingsSpider.parse_details, meta=data)
 
         # parse next page of results
         # next_page = response.css('.andes-pagination__button--next a::attr(href)').get()
         # if next_page is not None:
         #     yield response.follow(next_page, callback=self.parse)
 
-    def parse_details(self, response):
+    @staticmethod
+    def parse_details(response):
         if response.meta['is_project']:
-            valid, details = self.details_project(response)
+            valid, details = BuildingsSpider.details_project(response)
         else:
-            valid, details = self.details_regular(response)
+            valid, details = BuildingsSpider.details_regular(response)
 
         if valid:
             response.meta.update(details)
 
         yield response.meta
 
-    def details_regular(self, response):
-        print('===== REGULAR')
+    @staticmethod
+    def details_regular(response):
+        logger.debug('-- regular - {}'.format(response.url))
         terrain = response. \
             xpath('//*[@id="root-app"]/div/div[1]/div[1]/section[1]/div/div/div/section/ul/li[1]/span/text()').get()
         terrain = terrain.split(' ')[0]
@@ -117,14 +133,16 @@ class BuildingsSpider(scrapy.Spider):
 
         return is_valid, data
 
-    def details_project(self, response):
-        print('===== PROJECT')
+    @staticmethod
+    def details_project(response):
+        logger.debug('-- project - {}'.format(str(response.url)))
+
         building = response. \
             xpath('//*[@id="root-app"]/div[2]/div[1]/div[1]/section[2]/div[1]/section/ul/li[1]/span/text()').get()
-        building = building.split(' ')[0]
         try:
+            building = building.split(' ')[0]
             building = int(float(building))
-        except ValueError:
+        except Exception:
             pass
 
         bedrooms = response. \
