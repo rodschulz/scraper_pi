@@ -46,19 +46,21 @@ class BuildingsSpider(scrapy.Spider):
             logger.warning('no items found')
             return
 
-        n = 0
+        scrap_id = 0
         for item in items:
             is_project = item.css('.item__image-label::text').get() is not None
             currency = item.css('.price__symbol::text').get()
             price = float(item.css('.price__fraction::text').get().replace('.', ''))
             attrs = item.css('.item__attrs::text').extract()[0].replace('\xa0', ' ')
             brief = '|'.join(item.css('.main-title::text').getall())
-            link = item.css('.item__info-link::attr(href)').get()
+            link = item.css('.item__info-link::attr(href)').get().split('#')[0]
             # tmp = link.split('/')
             # town = tmp[5]
             # item_id = tmp[6].split('-')[0]
+            scrap_id += 1
 
             data = {
+                'scrap_id': scrap_id,
                 'is_project': is_project,
                 # 'town': town,
                 # 'id': item_id,
@@ -73,10 +75,8 @@ class BuildingsSpider(scrapy.Spider):
                 'bathrooms': -1,
             }
 
-            n += 1
-            logger.debug('  > found {:02}: ...{}...'.format(n, data['link'][34:34+70]))
-
-            yield response.follow(link, callback=BuildingsSpider.parse_details, meta=data)
+            logger.debug(' > scrap {:02}: {}...'.format(scrap_id, data['link'][34:34+min(70, len(data['link']))]))
+            yield scrapy.Request(link, callback=BuildingsSpider.parse_details, cb_kwargs={'data': data})
 
         # parse next page of results
         # next_page = response.css('.andes-pagination__button--next a::attr(href)').get()
@@ -84,84 +84,90 @@ class BuildingsSpider(scrapy.Spider):
         #     yield response.follow(next_page, callback=self.parse)
 
     @staticmethod
-    def parse_details(response):
-        if response.meta['is_project']:
-            valid, details = BuildingsSpider.details_project(response)
+    def parse_details(response, data):
+        if data['is_project']:
+            valid, details = BuildingsSpider.details_project(response, data)
         else:
-            valid, details = BuildingsSpider.details_regular(response)
+            valid, details = BuildingsSpider.details_regular(response, data)
 
         if valid:
-            response.meta.update(details)
+            data.update(details)
 
-        yield response.meta
-
-    @staticmethod
-    def details_regular(response):
-        logger.debug('-- regular - {}'.format(response.url))
-        terrain = response. \
-            xpath('//*[@id="root-app"]/div/div[1]/div[1]/section[1]/div/div/div/section/ul/li[1]/span/text()').get()
-        terrain = terrain.split(' ')[0]
-        if terrain.isdigit():
-            terrain = int(terrain)
-
-        building = response. \
-            xpath('//*[@id="root-app"]/div/div[1]/div[1]/section[1]/div/div/div/section/ul/li[2]/span/text()').get()
-        building = building.split(' ')[0]
-        if building.isdigit():
-            building = int(building)
-
-        bedrooms = response. \
-            xpath('//*[@id="root-app"]/div/div[1]/div[1]/section[1]/div/div/div/section/ul/li[3]/span/text()').get()
-        if bedrooms.isdigit():
-            bedrooms = int(bedrooms)
-
-        bathrooms = response. \
-            xpath('//*[@id="root-app"]/div/div[1]/div[1]/section[1]/div/div/div/section/ul/li[4]/span/text()').get()
-        if bathrooms.isdigit():
-            bathrooms = int(bathrooms)
-
-        is_valid = isinstance(terrain, numbers.Number) \
-                   and isinstance(building, numbers.Number) \
-                   and isinstance(bedrooms, numbers.Number) \
-                   and isinstance(bathrooms, numbers.Number)
-        data = {
-            'terrain': terrain,
-            'building': building,
-            'bedrooms': bedrooms,
-            'bathrooms': bathrooms
-        }
-
-        return is_valid, data
+        yield data
 
     @staticmethod
-    def details_project(response):
-        logger.debug('-- project - {}'.format(str(response.url)))
+    def details_regular(response, data):
+        logger.debug('  (REG) details scrap_id: {}'.format(data['scrap_id']))
 
-        building = response. \
-            xpath('//*[@id="root-app"]/div[2]/div[1]/div[1]/section[2]/div[1]/section/ul/li[1]/span/text()').get()
-        try:
-            building = building.split(' ')[0]
-            building = int(float(building))
-        except Exception:
-            pass
+        # terrain = response. \
+        #     xpath('//*[@id="root-app"]/div/div[1]/div[1]/section[1]/div/div/div/section/ul/li[1]/span/text()').get()
+        # terrain = terrain.split(' ')[0]
+        # if terrain.isdigit():
+        #     terrain = int(terrain)
+        #
+        # building = response. \
+        #     xpath('//*[@id="root-app"]/div/div[1]/div[1]/section[1]/div/div/div/section/ul/li[2]/span/text()').get()
+        # building = building.split(' ')[0]
+        # if building.isdigit():
+        #     building = int(building)
+        #
+        # bedrooms = response. \
+        #     xpath('//*[@id="root-app"]/div/div[1]/div[1]/section[1]/div/div/div/section/ul/li[3]/span/text()').get()
+        # if bedrooms.isdigit():
+        #     bedrooms = int(bedrooms)
+        #
+        # bathrooms = response. \
+        #     xpath('//*[@id="root-app"]/div/div[1]/div[1]/section[1]/div/div/div/section/ul/li[4]/span/text()').get()
+        # if bathrooms.isdigit():
+        #     bathrooms = int(bathrooms)
+        #
+        # is_valid = isinstance(terrain, numbers.Number) \
+        #            and isinstance(building, numbers.Number) \
+        #            and isinstance(bedrooms, numbers.Number) \
+        #            and isinstance(bathrooms, numbers.Number)
+        # data = {
+        #     'terrain': terrain,
+        #     'building': building,
+        #     'bedrooms': bedrooms,
+        #     'bathrooms': bathrooms
+        # }
+        #
+        # return is_valid, data
 
-        bedrooms = response. \
-            xpath('//*[@id="root-app"]/div[2]/div[1]/div[1]/section[2]/div[1]/section/ul/li[2]/span/text()').get()
-        if bedrooms.isdigit():
-            bedrooms = int(bedrooms)
+        return True, {'terrain': 10, 'building': 100}
 
-        bathrooms = response. \
-            xpath('//*[@id="root-app"]/div[2]/div[1]/div[1]/section[2]/div[1]/section/ul/li[3]/span/text()').get()
-        if bathrooms.isdigit():
-            bathrooms = int(bathrooms)
 
-        is_valid = isinstance(building, numbers.Number) \
-                   and isinstance(bedrooms, numbers.Number) \
-                   and isinstance(bathrooms, numbers.Number)
-        data = {
-            'building': building,
-            'bedrooms': bedrooms,
-            'bathrooms': bathrooms
-        }
+    @staticmethod
+    def details_project(response, data):
+        logger.debug('  (PRO) details scrap_id: {}'.format(data['scrap_id']))
 
-        return is_valid, data
+        # building = response. \
+        #     xpath('//*[@id="root-app"]/div[2]/div[1]/div[1]/section[2]/div[1]/section/ul/li[1]/span/text()').get()
+        # try:
+        #     building = building.split(' ')[0]
+        #     building = int(float(building))
+        # except Exception:
+        #     pass
+        #
+        # bedrooms = response. \
+        #     xpath('//*[@id="root-app"]/div[2]/div[1]/div[1]/section[2]/div[1]/section/ul/li[2]/span/text()').get()
+        # if bedrooms.isdigit():
+        #     bedrooms = int(bedrooms)
+        #
+        # bathrooms = response. \
+        #     xpath('//*[@id="root-app"]/div[2]/div[1]/div[1]/section[2]/div[1]/section/ul/li[3]/span/text()').get()
+        # if bathrooms.isdigit():
+        #     bathrooms = int(bathrooms)
+        #
+        # is_valid = isinstance(building, numbers.Number) \
+        #            and isinstance(bedrooms, numbers.Number) \
+        #            and isinstance(bathrooms, numbers.Number)
+        # data = {
+        #     'building': building,
+        #     'bedrooms': bedrooms,
+        #     'bathrooms': bathrooms
+        # }
+        #
+        # return is_valid, data
+
+        return True, {'terrain': 10, 'building': 100}
