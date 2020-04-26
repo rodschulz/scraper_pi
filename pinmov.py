@@ -55,7 +55,7 @@ class BuildingsSpider(scrapy.Spider):
             attrs = item.css('.item__attrs::text').extract()[0].replace('\xa0', ' ')
             brief = '|'.join(item.css('.main-title::text').getall())
             link = item.css('.item__info-link::attr(href)').get().split('#')[0]
-            town = response.strip('/').url.split('/')[-1]
+            town = response.url.strip('/').split('/')[-1]
             # item_id = tmp[6].split('-')[0]
 
             scrap_id += 1
