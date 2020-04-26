@@ -7,11 +7,12 @@ import scrapy
 logging.config.fileConfig('logging.conf')
 logger = logging.getLogger(__name__)
 
-URL_LAS_CONDES = 'https://www.portalinmobiliario.com/venta/casa/las-condes-metropolitana'
-URL_PROVIDENCIA = 'https://www.portalinmobiliario.com/venta/casa/providencia-metropolitana'
-URL_LA_REINA = 'https://www.portalinmobiliario.com/venta/casa/la-reina-metropolitana'
-URL_NUNOA = 'https://www.portalinmobiliario.com/venta/casa/nunoa-metropolitana'
+_URL_LAS_CONDES = 'https://www.portalinmobiliario.com/venta/casa/las-condes-metropolitana'
+_URL_PROVIDENCIA = 'https://www.portalinmobiliario.com/venta/casa/providencia-metropolitana'
+_URL_LA_REINA = 'https://www.portalinmobiliario.com/venta/casa/la-reina-metropolitana'
+_URL_NUNOA = 'https://www.portalinmobiliario.com/venta/casa/nunoa-metropolitana'
 
+_SCRAP_TYPE = ['REG', 'PRO']
 
 # TODO
 # - UT link formats different (old urls) => https://www.portalinmobiliario.com/MLC-517628020-casa-en-venta-de-4-dormitorios-en-las-condes-_JM#position=1&type=item&tracking_id=e2af56e6-6952-44fb-a843-df1f5f0d94c3
@@ -23,10 +24,10 @@ URL_NUNOA = 'https://www.portalinmobiliario.com/venta/casa/nunoa-metropolitana'
 class BuildingsSpider(scrapy.Spider):
     name = "buildings"
     start_urls = [
-        # URL_LAS_CONDES,
-        # URL_PROVIDENCIA,
-        # URL_LA_REINA,
-        URL_NUNOA,
+        # _URL_LAS_CONDES,
+        # _URL_PROVIDENCIA,
+        # _URL_LA_REINA,
+        _URL_NUNOA,
     ]
 
     custom_settings = {
@@ -54,15 +55,15 @@ class BuildingsSpider(scrapy.Spider):
             attrs = item.css('.item__attrs::text').extract()[0].replace('\xa0', ' ')
             brief = '|'.join(item.css('.main-title::text').getall())
             link = item.css('.item__info-link::attr(href)').get().split('#')[0]
-            # tmp = link.split('/')
-            # town = tmp[5]
+            town = response.strip('/').url.split('/')[-1]
             # item_id = tmp[6].split('-')[0]
+
             scrap_id += 1
 
             data = {
                 'scrap_id': scrap_id,
                 'is_project': is_project,
-                # 'town': town,
+                'town': town,
                 # 'id': item_id,
                 'price': price,
                 'currency': currency,
@@ -78,6 +79,9 @@ class BuildingsSpider(scrapy.Spider):
             logger.debug(' > scrap {:02}: {}...'.format(scrap_id, data['link'][34:34+min(70, len(data['link']))]))
             yield scrapy.Request(link, callback=BuildingsSpider.parse_details, cb_kwargs={'data': data})
 
+            # if scrap_id == 10:
+            #     break
+
         # parse next page of results
         # next_page = response.css('.andes-pagination__button--next a::attr(href)').get()
         # if next_page is not None:
@@ -85,6 +89,8 @@ class BuildingsSpider(scrapy.Spider):
 
     @staticmethod
     def parse_details(response, data):
+        logger.debug('  ({})({}) scrap: {:03}'.format(response.status, _SCRAP_TYPE[data['is_project']], data['scrap_id']))
+
         if data['is_project']:
             valid, details = BuildingsSpider.details_project(response, data)
         else:
@@ -97,7 +103,7 @@ class BuildingsSpider(scrapy.Spider):
 
     @staticmethod
     def details_regular(response, data):
-        logger.debug('  (REG) details scrap_id: {}'.format(data['scrap_id']))
+
 
         # terrain = response. \
         #     xpath('//*[@id="root-app"]/div/div[1]/div[1]/section[1]/div/div/div/section/ul/li[1]/span/text()').get()
@@ -139,8 +145,6 @@ class BuildingsSpider(scrapy.Spider):
 
     @staticmethod
     def details_project(response, data):
-        logger.debug('  (PRO) details scrap_id: {}'.format(data['scrap_id']))
-
         # building = response. \
         #     xpath('//*[@id="root-app"]/div[2]/div[1]/div[1]/section[2]/div[1]/section/ul/li[1]/span/text()').get()
         # try:
