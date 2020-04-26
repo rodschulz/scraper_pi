@@ -1,4 +1,5 @@
 import logging
+import logging.config
 import numbers
 
 import scrapy
@@ -18,7 +19,7 @@ _SCRAP_TYPE = ['REG', 'PRO']
 # - UT link formats different (old urls) => https://www.portalinmobiliario.com/MLC-517628020-casa-en-venta-de-4-dormitorios-en-las-condes-_JM#position=1&type=item&tracking_id=e2af56e6-6952-44fb-a843-df1f5f0d94c3
 # - UT for missing 'attrs'
 # - UT for missing id
-# - UT for missing spec items (sup total, sup util, dorms, baños)
+# - UT for missing spec items (sup total, sup util, dorms, banos)
 
 
 class BuildingsSpider(scrapy.Spider):
@@ -89,7 +90,7 @@ class BuildingsSpider(scrapy.Spider):
 
     @staticmethod
     def parse_details(response, data):
-        logger.debug('  ({})({}) scrap: {:03}'.format(response.status, _SCRAP_TYPE[data['is_project']], data['scrap_id']))
+        logger.debug('  ({}) scrap: {:03}'.format(_SCRAP_TYPE[data['is_project']], data['scrap_id']))
 
         if data['is_project']:
             valid, details = BuildingsSpider.details_project(response, data)
